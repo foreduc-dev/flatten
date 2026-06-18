@@ -22,21 +22,15 @@
     --radius: 8px;
   }
   body {
-    background: linear-gradient(135deg, var(--bg-dark), var(--bg-light)), url('https://images.unsplash.com/photo-1522199710521-72d69614c702?auto=format&fit=crop&w=1400&q=80');
+    background: var(--bg);
     background-size: cover;
-    background-blend-mode: overlay;
+    /* No background image or gradient for cleaner glassmorphism effect */
     color: var(--text);
     font-family: 'Inter', sans-serif;
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    animation: gradientShift 12s ease infinite;
-  }
-  @keyframes gradientShift {
-    0% { background: #0d1117; }
-    50% { background: #1a202c; }
-    100% { background: #0d1117; }
   }
   .card {
     backdrop-filter: blur(12px);
