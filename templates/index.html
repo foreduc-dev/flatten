@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ARMS Attendance Viewer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --accent: #2f81f7;
+      --accent-dim: #1f4e8c;
+      --green: #3fb950;
+      --red: #f85149;
+      --yellow: #d29922;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --text-dim: #484f58;
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 14px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface);
+    }
+
+    header .logo {
+      width: 28px; height: 28px;
+      background: var(--accent);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; color: white;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.2px;
+    }
+
+    header span {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-left: auto;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* MAIN LAYOUT */
+    main {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+
+    /* CARD */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 16px;
+    }
+
+    /* FORM */
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    input, select {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      padding: 9px 12px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent);
+    }
+
+    input::placeholder {
+      color: var(--text-dim);
+    }
+
+    select option {
+      background: var(--surface);
+    }
+
+    .hint {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    /* BUTTONS */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button {
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 9px 18px;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) { opacity: 0.85; }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover:not(:disabled) { color: var(--text); border-color: var(--text-muted); }
+
+    /* ALERT */
+    .alert {
+      border-radius: 6px;
+      font-size: 13px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .alert.error { background: rgba(248,81,73,0.12); border: 1px solid rgba(248,81,73,0.3); color: #f85149; }
+    .alert.info  { background: rgba(47,129,247,0.1); border: 1px solid rgba(47,129,247,0.3); color: #79c0ff; }
+
+    /* STATS ROW */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-box .num {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-box .lbl {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-box.total .num  { color: var(--text); }
+    .stat-box.present .num { color: var(--green); }
+    .stat-box.absent .num  { color: var(--red); }
+    .stat-box.od .num      { color: var(--yellow); }
+
+    /* TABLE */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead tr {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    tbody tr:last-child td { border-bottom: none; }
+
+    tbody tr:hover { background: var(--surface2); }
+
+    .badge {
+      display: inline-block;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 10px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .badge.present { background: rgba(63,185,80,0.15); color: var(--green); }
+    .badge.absent  { background: rgba(248,81,73,0.15);  color: var(--red); }
+    .badge.od      { background: rgba(210,153,34,0.15); color: var(--yellow); }
+    .badge.marked  { background: rgba(47,129,247,0.12); color: #79c0ff; }
+    .badge.inactive{ background: var(--surface2); color: var(--text-dim); }
+
+    /* TOGGLE SWITCH */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--red);
+      transition: .2s; border-radius: 24px;
+    }
+    .slider:before {
+      position: absolute; content: "";
+      height: 18px; width: 18px;
+      left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .2s; border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--green); }
+    input:checked + .slider:before { transform: translateX(20px); }
+    input:disabled + .slider { opacity: 0.5; cursor: not-allowed; }
+
+    /* LOADING */
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* EMPTY STATE */
+    .empty {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-muted);
+    }
+
+    .empty svg { margin-bottom: 12px; opacity: 0.4; }
+    .empty p { font-size: 13px; }
+
+    #results { display: none; }
+
+    /* COURSE SELECT ROW */
+    .course-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      margin-top: 12px;
+    }
+
+    .course-row .form-group { flex: 1; }
+
+    @media (max-width: 600px) {
+      .form-row { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      header span { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">A</div>
+  <h1>ARMS Attendance Viewer</h1>
+  <span>SSE · Saveetha University</span>
+</header>
+
+<main>
+
+  <!-- COURSE SELECT -->
+  <div class="card" id="courseCard">
+    <div class="card-title">Course</div>
+    <div id="alertBox" class="alert"></div>
+
+    <div class="course-row">
+      <div>
+        <label>Enter Course ID</label>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <input type="text" id="courseIdManual" placeholder="e.g. 32264" style="width:160px;" />
+          <button class="btn-primary" onclick="fetchAttendance()" id="btnFetch">Fetch</button>
+          <button class="btn-secondary" onclick="reset()">Clear Screen</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <div class="stats-row">
+      <div class="stat-box total">
+        <div class="num" id="statTotal">0</div>
+        <div class="lbl">Total</div>
+      </div>
+      <div class="stat-box present">
+        <div class="num" id="statPresent">0</div>
+        <div class="lbl">Present</div>
+      </div>
+      <div class="stat-box absent">
+        <div class="num" id="statAbsent">0</div>
+        <div class="lbl">Absent / Marked</div>
+      </div>
+      <div class="stat-box od">
+        <div class="num" id="statOD">0</div>
+        <div class="lbl">OD Approved</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Reg No.</th>
+            <th>Student Name</th>
+            <th>Previous Status</th>
+            <th>Mark Present</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    
+    <div class="btn-row" style="margin-top: 16px; justify-content: flex-end;">
+      <button class="btn-primary" onclick="submitAttendance()" id="btnSubmit">Post Attendance</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  function showAlert(msg, type = 'error') {
+    const el = document.getElementById('alertBox');
+    el.textContent = msg;
+    el.className = `alert ${type}`;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 5000);
+  }
+
+
+
+  async function fetchAttendance() {
+    const courseId = document.getElementById('courseIdManual').value.trim();
+
+    if (!courseId) { showAlert('Please enter a Course ID.'); return; }
+
+    const btn = document.getElementById('btnFetch');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Loading…';
+
+    document.getElementById('results').style.display = 'none';
+
+    try {
+      const resp = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ course_id: courseId })
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        showAlert(data.error || 'Failed to fetch attendance.');
+        return;
+      }
+
+      renderTable(data.students || []);
+
+    } catch (e) {
+      showAlert('Network error: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Fetch';
+    }
+  }
+
+  function renderTable(students) {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+
+    let present = 0, absent = 0, od = 0;
+
+    // We attach the students array to the window so submitAttendance can access their IDs
+    window.currentStudents = students;
+
+    students.forEach((s, i) => {
+      let statusBadge, activeBadge;
+      let isPresent = true;
+      let disabledStr = '';
+
+      if (!s.Isactive) {
+        statusBadge = '<span class="badge inactive">Inactive</span>';
+        isPresent = false;
+        disabledStr = 'disabled';
+      } else if (s.ODFlag) {
+        statusBadge = '<span class="badge od">OD</span>';
+        isPresent = true;
+        od++;
+        disabledStr = 'disabled'; // Probably can't override OD
+      } else if (s.Isabsent === 'NA') {
+        statusBadge = '<span class="badge present">Not Marked</span>';
+        isPresent = true;
+      } else if (s.Isabsent === 'ABS') {
+        statusBadge = '<span class="badge absent">Absent</span>';
+        isPresent = true; // User requested everyone default present
+      } else {
+        statusBadge = '<span class="badge marked">Present</span>';
+        isPresent = true;
+      }
+
+      if (isPresent) present++; else absent++;
+
+      let checkedStr = isPresent ? 'checked' : '';
+
+      tbody.innerHTML += `
+        <tr>
+          <td style="color:var(--text-dim); font-family:'JetBrains Mono',monospace; font-size:11px;">${i + 1}</td>
+          <td style="font-family:'JetBrains Mono',monospace; font-size:12px;">${s.RegId || '—'}</td>
+          <td>${s.StudentName || '—'}</td>
+          <td>${statusBadge}</td>
+          <td>
+            <label class="switch">
+              <input type="checkbox" id="chk_${i}" ${checkedStr} ${disabledStr} onchange="updateStats()">
+              <span class="slider"></span>
+            </label>
+          </td>
+        </tr>`;
+    });
+
+    updateStats();
+    document.getElementById('results').style.display = 'block';
+  }
+
+  function updateStats() {
+    let present = 0, absent = 0, od = 0;
+    const students = window.currentStudents || [];
+
+    students.forEach((s, i) => {
+        const chk = document.getElementById('chk_' + i);
+        if (s.ODFlag) {
+            od++;
+        } else if (chk && chk.checked) {
+            present++;
+        } else {
+            absent++;
+        }
+    });
+
+    document.getElementById('statTotal').textContent = students.length;
+    document.getElementById('statPresent').textContent = present;
+    document.getElementById('statAbsent').textContent = absent;
+    document.getElementById('statOD').textContent = od;
+  }
+
+  async function submitAttendance() {
+    const courseId = document.getElementById('courseIdManual').value.trim();
+
+    if (!courseId) { showAlert('Please enter a Course ID first.'); return; }
+
+    const btn = document.getElementById('btnSubmit');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Posting…';
+
+    const students = window.currentStudents || [];
+    let absentIds = [];
+
+    // Gather IDs of students who are UNCHECKED (Absent) and NOT inactive
+    students.forEach((s, i) => {
+        const chk = document.getElementById('chk_' + i);
+        if (chk && !chk.checked && !s.ODFlag && s.Isactive) {
+            absentIds.push(s.StudentId);
+        }
+    });
+
+    const studentIdList = absentIds.join(',');
+
+    try {
+      const resp = await fetch('/api/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          course_id: courseId,
+          student_id_list: studentIdList,
+          type: "ABS"
+        })
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        showAlert(data.error || 'Failed to post attendance.');
+      } else {
+        showAlert(data.message || 'Attendance posted successfully!', 'info');
+      }
+
+    } catch (e) {
+      showAlert('Network error: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = 'Post Attendance';
+    }
+  }
+
+  function reset() {
+    document.getElementById('courseIdManual').value = '';
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('alertBox').style.display = 'none';
+  }
+</script>
+
+</body>
+</html>
