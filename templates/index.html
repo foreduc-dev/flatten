@@ -8,38 +8,52 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
     :root {
-      --bg: #0d1117;
-      --surface: #161b22;
-      --surface2: #21262d;
+      --bg-dark: #0d1117;
+      --bg-light: #161b22;
+      --bg: var(--bg-dark);
+      --surface: #21262d;
+      --surface2: #2c313a;
       --border: #30363d;
-      --accent: #2f81f7;
-      --accent-dim: #1f4e8c;
+      --accent: #58a6ff;
+      --accent-dim: #1f6feb;
       --green: #3fb950;
       --red: #f85149;
       --yellow: #d29922;
-      --text: #e6edf3;
+      --text: #c9d1d9;
       --text-muted: #8b949e;
-      --text-dim: #484f58;
+      --text-dim: #6e7681;
       --radius: 8px;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #0d1117, #161b22);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    animation: fadeIn 0.6s ease-out;
+    overflow-x: hidden;
+  }
 
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     /* HEADER */
     header {
+      position: sticky;
+      top: 0;
       border-bottom: 1px solid var(--border);
       padding: 14px 32px;
       display: flex;
       align-items: center;
       gap: 12px;
-      background: var(--surface);
+      background: rgba(22,27,34,0.9);
+      backdrop-filter: blur(10px);
+      z-index: 10;
     }
 
     header .logo {
@@ -73,13 +87,14 @@
     }
 
     /* CARD */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      margin-bottom: 20px;
-    }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(12px);
+  }
 
     .card-title {
       font-size: 13px;
@@ -352,7 +367,6 @@
 <header>
   <div class="logo">A</div>
   <h1>ARMS Attendance Viewer</h1>
-  
   <a href="/logout" class="btn-secondary" style="margin-left:auto;">Logout</a>
 </header>
 
