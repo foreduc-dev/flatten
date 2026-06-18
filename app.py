@@ -10,6 +10,18 @@ import os
 
 app = Flask(__name__)
 
+# -----------------------------------------------------------------
+# Auto‑logout: clear the session on every request (except login & static)
+# -----------------------------------------------------------------
+@app.before_request
+def auto_logout():
+    # Allow access to the login page, logout route, static files, and any API endpoints that are explicitly exempt
+    exempt = ['login', 'static', 'logout']
+    if request.endpoint not in exempt:
+        session.clear()
+        return redirect(url_for('login'))
+
+
 # ----- CONFIG -------------------------------------------------
 BASE_URL = "https://arms.sse.saveetha.com"
 USERNAME = os.getenv("ARMS_USERNAME", "Ssetssh239")
