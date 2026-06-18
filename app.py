@@ -1,4 +1,7 @@
-from flask import Flask, request, jsonify, render_template, Response
+# ──────────────────────────────────────
+#  app.py
+# ──────────────────────────────────────
+from flask import Flask, request, jsonify, render_template, Response, session, redirect, url_for, flash
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -7,11 +10,63 @@ import os
 
 app = Flask(__name__)
 
+# ----- CONFIG -------------------------------------------------
 BASE_URL = "https://arms.sse.saveetha.com"
-USERNAME = os.environ.get("ARMS_USERNAME", "Ssetssh239")
-PASSWORD = os.environ.get("ARMS_PASSWORD", "Ssetssh239")
-USER_ID = os.environ.get("ARMS_USER_ID", "1141")
+USERNAME = os.getenv("ARMS_USERNAME", "Ssetssh239")
+PASSWORD = os.getenv("ARMS_PASSWORD", "Ssetssh239")
+USER_ID  = os.getenv("ARMS_USER_ID",   "1141")
 
+# Flask secret key – required for sessions
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "change‑me‑to‑a‑random‑string")
+
+# ----- AUTH ---------------------------------------------------
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
+
+def check_app_auth(username, password):
+    app_user = os.getenv("APP_USERNAME", "admin")
+    app_pass = os.getenv("APP_PASSWORD", "kpybala")
+    return username == app_user and password == app_pass
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        app_user = os.environ.get('APP_USERNAME', 'admin')
+        app_pass = os.environ.get('APP_PASSWORD', 'kpybala')
+        if username == app_user and password == app_pass:
+            session['logged_in'] = True
+            session['username'] = username
+            flash('Login successful!', 'success')
+            return redirect(url_for('home'))
+        else:
+            flash('Invalid credentials', 'danger')
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('Logged out', 'info')
+    return redirect(url_for('login'))
+
+# ----- ROUTES -------------------------------------------------
+@app.route('/')
+def home():
+    """Home route – shows login if not authenticated, else main app."""
+    if session.get('logged_in'):
+        return render_template('index.html')
+    return redirect(url_for('login'))
+
+# The `/login` route already handles GET (show form) and POST (process credentials).
+# No additional route needed.
+
+# ----- API ENDPOINTS (protected) -------------------------------
+# Cached ARMS session
 cached_session = None
 cookie_timestamp = 0
 
@@ -19,79 +74,43 @@ def _get_logged_in_session(force_refresh=False):
     global cached_session, cookie_timestamp
     if not force_refresh and cached_session and (time.time() - cookie_timestamp < 900):
         return cached_session
-
-    session = requests.Session()
-    session.headers.update({
+    sess = requests.Session()
+    sess.headers.update({
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
         "Referer": f"{BASE_URL}/FacultyPortal/Attendance.aspx"
     })
-
-    resp = session.get(BASE_URL, timeout=15)
+    # initial GET to obtain viewstate
+    resp = sess.get(BASE_URL, timeout=15)
     if resp.status_code != 200:
-        raise Exception(f"Failed to load login page. Status: {resp.status_code}")
-
-    soup = BeautifulSoup(resp.text, 'html.parser')
+        raise Exception(f"Failed to load ARMS login page: {resp.status_code}")
+    soup = BeautifulSoup(resp.text, "html.parser")
     viewstate = soup.find('input', {'name': '__VIEWSTATE'})
     viewstategenerator = soup.find('input', {'name': '__VIEWSTATEGENERATOR'})
     eventvalidation = soup.find('input', {'name': '__EVENTVALIDATION'})
-
     payload = {
-        '__VIEWSTATE': viewstate.get('value', '') if viewstate else '',
-        '__VIEWSTATEGENERATOR': viewstategenerator.get('value', '') if viewstategenerator else '',
-        '__EVENTVALIDATION': eventvalidation.get('value', '') if eventvalidation else '',
+        '__VIEWSTATE': viewstate.get('value','') if viewstate else '',
+        '__VIEWSTATEGENERATOR': viewstategenerator.get('value','') if viewstategenerator else '',
+        '__EVENTVALIDATION': eventvalidation.get('value','') if eventvalidation else '',
         'txtusername': USERNAME,
         'txtpassword': PASSWORD,
         'btnlogin': 'Login'
     }
-
-    post_resp = session.post(BASE_URL, data=payload, timeout=15)
-    
-    # Check if login was successful by checking if ASP.NET_SessionId exists or if we got redirected
-    cookies = session.cookies.get_dict()
-    if 'ASP.NET_SessionId' not in cookies:
-        raise Exception("Login failed. Check hardcoded username/password.")
-
-    cached_session = session
+    post_resp = sess.post(BASE_URL, data=payload, timeout=15)
+    if 'ASP.NET_SessionId' not in sess.cookies.get_dict():
+        raise Exception("Login to ARMS failed. Check credentials.")
+    cached_session = sess
     cookie_timestamp = time.time()
-    return session
-
-def check_auth(username, password):
-    # Set your desired username and password here for accessing the web app
-    app_user = os.environ.get("APP_USERNAME", "admin")
-    app_pass = os.environ.get("APP_PASSWORD", "kpybala")
-    return username == app_user and password == app_pass
-
-def authenticate():
-    return Response(
-    'Could not verify your access level for that URL.\n'
-    'You have to login with proper credentials', 401,
-    {'WWW-Authenticate': 'Basic realm="Login Required"'})
-
-def requires_auth(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        auth = request.authorization
-        if not auth or not check_auth(auth.username, auth.password):
-            return authenticate()
-        return f(*args, **kwargs)
-    return decorated
-
-@app.route("/")
-@requires_auth
-def index():
-    return render_template("index.html")
+    return sess
 
 @app.route("/api/attendance", methods=["POST"])
-@requires_auth
+@login_required
 def get_attendance():
-    data = request.json
-    course_id = data.get("course_id")
-
+    data = request.json or {}
+    course_id = data.get('course_id')
     if not course_id:
         return jsonify({"error": "course_id is required"}), 400
-
     try:
-        req_session = _get_logged_in_session()
+        sess = _get_logged_in_session()
         url = f"{BASE_URL}/Handler/Fees.ashx"
         params = {
             "Page": "StudentByCourseSection",
@@ -100,80 +119,59 @@ def get_attendance():
             "CourseId": course_id,
             "SectionId": "0"
         }
-
-        resp = req_session.get(url, params=params, timeout=15)
-
-        # If session is invalid, try fetching a new session once
+        resp = sess.get(url, params=params, timeout=15)
         if resp.text.strip().startswith("<"):
-            req_session = _get_logged_in_session(force_refresh=True)
-            resp = req_session.get(url, params=params, timeout=15)
-            
+            sess = _get_logged_in_session(force_refresh=True)
+            resp = sess.get(url, params=params, timeout=15)
             if resp.text.strip().startswith("<"):
-                return jsonify({"error": "Session error even after relogin."}), 401
-
+                return jsonify({"error": "Session error after relogin."}), 401
         students = resp.json()
         return jsonify({"success": True, "students": students})
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/courses", methods=["POST"])
-@requires_auth
+@login_required
 def get_courses():
     try:
-        req_session = _get_logged_in_session()
+        sess = _get_logged_in_session()
         url = f"{BASE_URL}/Handler/Administration.ashx"
-        params = {
-            "Page": "CourseApprovePending",
-            "Mode": "GETCOURSEBYUSERID",
-            "Id": "0"
-        }
-
-        resp = req_session.get(url, params=params, timeout=15)
-
+        params = {"Page": "CourseApprovePending", "Mode": "GETCOURSEBYUSERID", "Id": "0"}
+        resp = sess.get(url, params=params, timeout=15)
         if resp.text.strip().startswith("<"):
-            req_session = _get_logged_in_session(force_refresh=True)
-            resp = req_session.get(url, params=params, timeout=15)
-            
+            sess = _get_logged_in_session(force_refresh=True)
+            resp = sess.get(url, params=params, timeout=15)
             if resp.text.strip().startswith("<"):
-                return jsonify({"error": "Session error even after relogin."}), 401
-
+                return jsonify({"error": "Session error after relogin."}), 401
         courses = resp.json()
         return jsonify({"courses": courses})
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/submit", methods=["POST"])
-@requires_auth
+@login_required
 def submit_attendance():
-    data = request.json
-    course_id = data.get("course_id")
-    student_id_list = data.get("student_id_list", "")
-    submit_type = data.get("type", "")
-
+    data = request.json or {}
+    course_id = data.get('course_id')
+    student_id_list = data.get('student_id_list', "")
+    submit_type = data.get('type', "")
     if not course_id:
         return jsonify({"error": "course_id is required"}), 400
-
     try:
-        req_session = _get_logged_in_session()
-        url = f"{BASE_URL}/FacultyPortal/Attendance.aspx"
-        
-        # 1. GET request to fetch viewstate
-        get_resp = req_session.get(url, timeout=15)
+        sess = _get_logged_in_session()
+        # fetch viewstate from attendance page
+        page_url = f"{BASE_URL}/FacultyPortal/Attendance.aspx"
+        get_resp = sess.get(page_url, timeout=15)
         soup = BeautifulSoup(get_resp.text, 'html.parser')
-        
         viewstate = soup.find('input', {'name': '__VIEWSTATE'})
         viewstategenerator = soup.find('input', {'name': '__VIEWSTATEGENERATOR'})
         eventvalidation = soup.find('input', {'name': '__EVENTVALIDATION'})
-
-        # 2. POST request
         payload = {
             '__EVENTTARGET': 'ctl00$cphbody$btnSubmit',
             '__EVENTARGUMENT': '',
-            '__VIEWSTATE': viewstate.get('value', '') if viewstate else '',
-            '__VIEWSTATEGENERATOR': viewstategenerator.get('value', '') if viewstategenerator else '',
-            '__EVENTVALIDATION': eventvalidation.get('value', '') if eventvalidation else '',
+            '__VIEWSTATE': viewstate.get('value','') if viewstate else '',
+            '__VIEWSTATEGENERATOR': viewstategenerator.get('value','') if viewstategenerator else '',
+            '__EVENTVALIDATION': eventvalidation.get('value','') if eventvalidation else '',
             'ctl00$cphbody$ddlGraduationType': '0',
             'ctl00$cphbody$ddlCourse': course_id,
             'ctl00$cphbody$HdnCourseId': course_id,
@@ -185,12 +183,11 @@ def submit_attendance():
             'ctl00$hdngradeid': '0',
             'ctl00$hdnfeedback': '2'
         }
-
-        post_resp = req_session.post(url, data=payload, timeout=15)
-        
+        post_resp = sess.post(page_url, data=payload, timeout=15)
         return jsonify({"success": True, "message": "Attendance posted successfully!"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# -----------------------------------------------------------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

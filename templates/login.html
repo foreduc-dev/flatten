@@ -65,6 +65,9 @@
 <body>
   <div class="card">
     <h1>Sign In</h1>
+<% for category, message in get_flashed_messages(with_categories=true) %>
+          <div class="flash {{ category }}" style="margin-bottom:1rem; color:{% if category == 'error' %}#ff6b6b{% elif category == 'success' %}#3fb950{% else %}#79c0ff{% endif %};">{{ message }}</div>
+        <% endfor %>
     <form method="POST" action="/login">
       <input type="text" name="username" placeholder="Username" required />
       <input type="password" name="password" placeholder="Password" required />
