@@ -3,13 +3,14 @@ import requests
 from bs4 import BeautifulSoup
 import time
 from functools import wraps
+import os
 
 app = Flask(__name__)
 
 BASE_URL = "https://arms.sse.saveetha.com"
-USERNAME = "Ssetssh239"
-PASSWORD = "Ssetssh239"
-USER_ID = "1141"
+USERNAME = os.environ.get("ARMS_USERNAME", "Ssetssh239")
+PASSWORD = os.environ.get("ARMS_PASSWORD", "Ssetssh239")
+USER_ID = os.environ.get("ARMS_USER_ID", "1141")
 
 cached_session = None
 cookie_timestamp = 0
@@ -56,7 +57,9 @@ def _get_logged_in_session(force_refresh=False):
 
 def check_auth(username, password):
     # Set your desired username and password here for accessing the web app
-    return username == 'admin' and password == 'saveetha'
+    app_user = os.environ.get("APP_USERNAME", "admin")
+    app_pass = os.environ.get("APP_PASSWORD", "kpybala")
+    return username == app_user and password == app_pass
 
 def authenticate():
     return Response(
