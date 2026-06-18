@@ -18,6 +18,10 @@ def auto_logout():
     # Allow access to the login page, logout route, static files, and any API endpoints that are explicitly exempt
     exempt = ['login', 'static', 'logout']
     if request.endpoint not in exempt:
+        # If we just logged in, allow the next request (e.g., redirect to home) before forcing logout
+        if session.get('allow_next'):
+            session.pop('allow_next', None)
+            return  # continue processing request
         session.clear()
         return redirect(url_for('login'))
 
@@ -53,6 +57,7 @@ def login():
         app_pass = os.environ.get('APP_PASSWORD', 'kpybala')
         if username == app_user and password == app_pass:
             session['logged_in'] = True
+            session['allow_next'] = True  # allow immediate home view after login
             session['username'] = username
             flash('Login successful!', 'success')
             return redirect(url_for('home'))

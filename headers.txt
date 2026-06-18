@@ -1,0 +1,9 @@
+HTTP/1.1 200 OK
+Server: Werkzeug/3.1.8 Python/3.14.5
+Date: Thu, 18 Jun 2026 17:31:55 GMT
+Content-Type: text/html; charset=utf-8
+Content-Length: 2725
+Vary: Cookie
+Set-Cookie: session=eyJfZmxhc2hlcyI6W3siIHQiOlsiZGFuZ2VyIiwiSW52YWxpZCBjcmVkZW50aWFscyJdfV19.ajQriw.imYobKDN-nvoWTkJQA0Jq25y_yg; HttpOnly; Path=/
+Connection: close
+
