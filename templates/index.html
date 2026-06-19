@@ -641,19 +641,22 @@
         if (mode === 'single') {
             const courseId = document.getElementById('courseIdManual').value.trim();
             if (!courseId) { showAlert('Please enter a Course ID first.'); return; }
-            // Fetch and post for single course
-            fetchAttendance().then(() => {
-                submitAttendance();
-                // After processing, load the entire slot_c.csv and display it
-                fetch('/slot_c.csv')
-                    .then(r => r.ok ? r.text() : Promise.reject('Failed to load CSV'))
-                    .then(txt => {
-                        const pre = document.getElementById('csvPre');
-                        pre.textContent = txt;
-                        document.getElementById('csvResults').style.display = 'block';
-                    })
-                    .catch(err => showAlert(err));
-            });
+            // 0️⃣ Show the CSV data before any posting
+            fetch('/slot_c.csv')
+                .then(r => r.ok ? r.text() : Promise.reject('Failed to load CSV'))
+                .then(txt => {
+                    const pre = document.getElementById('csvPre');
+                    pre.textContent = txt;
+                    document.getElementById('csvResults').style.display = 'block';
+                })
+                .catch(err => showAlert(err))
+                .finally(() => {
+                    // 1️⃣ Fetch the attendance for the entered course
+                    fetchAttendance().then(() => {
+                        // 2️⃣ Post the attendance for that course
+                        submitAttendance();
+                    });
+                });
         } else if (mode === 'all') {
         // Fetch slot_c.csv from server and process each course ID
         fetch('/static/slot_c.csv')
