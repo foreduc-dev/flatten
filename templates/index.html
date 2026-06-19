@@ -453,6 +453,12 @@
     <div class="btn-row" style="margin-top: 16px; justify-content: flex-end;">
       <button class="btn-primary" onclick="submitAttendance()" id="btnSubmit">Post Attendance</button>
     </div>
+
+    <div id="csvResults" style="display:none; margin-top:20px;">
+      <h3>Slot C CSV Data</h3>
+      <pre id="csvPre" style="background:#0d1117;color:#c9d1d9;padding:12px;border-radius:6px;overflow:auto;"></pre>
+    </div>
+
   </div>
 
 </main>
@@ -632,14 +638,23 @@
 
    function handlePost() {
     const mode = document.querySelector('input[name="postMode"]:checked').value;
-    if (mode === 'single') {
-        const courseId = document.getElementById('courseIdManual').value.trim();
-        if (!courseId) { showAlert('Please enter a Course ID first.'); return; }
-        // Fetch and post for single course
-        fetchAttendance().then(() => {
-            submitAttendance();
-        });
-    } else if (mode === 'all') {
+        if (mode === 'single') {
+            const courseId = document.getElementById('courseIdManual').value.trim();
+            if (!courseId) { showAlert('Please enter a Course ID first.'); return; }
+            // Fetch and post for single course
+            fetchAttendance().then(() => {
+                submitAttendance();
+                // After processing, load the entire slot_c.csv and display it
+                fetch('/slot_c.csv')
+                    .then(r => r.ok ? r.text() : Promise.reject('Failed to load CSV'))
+                    .then(txt => {
+                        const pre = document.getElementById('csvPre');
+                        pre.textContent = txt;
+                        document.getElementById('csvResults').style.display = 'block';
+                    })
+                    .catch(err => showAlert(err));
+            });
+        } else if (mode === 'all') {
         // Fetch slot_c.csv from server and process each course ID
         fetch('/static/slot_c.csv')
             .then(resp => {

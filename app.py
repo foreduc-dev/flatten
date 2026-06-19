@@ -198,8 +198,11 @@ def submit_attendance():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# -----------------------------------------------------------------
 from flask import send_from_directory
+
+@app.route('/slot_c.csv')
+def serve_slot_csv():
+    return send_from_directory(os.path.abspath(os.path.dirname(__file__)), 'slot_c.csv')
 
 @app.route('/slot_c.csv')
 def serve_slot_csv():
