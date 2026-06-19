@@ -401,12 +401,10 @@
             <label><input type="radio" name="postMode" value="all" /> All Courses (CSV)</label>
           </div>
         </div>
-        <div class="form-group" id="csvUploadGroup" style="display:none;">
-          <label for="csvFile">Upload CSV</label>
-          <input type="file" id="csvFile" accept=".csv" />
+        <!-- Removed CSV file upload; bulk processing will read slot_c.csv from server -->
         </div>
         <div class="form-group" style="display:flex; gap:8px; margin-top:6px;">
-          <button class="btn-primary" onclick="handlePost()" id="btnPost">Post Attendance</button>
+          <button class="btn-primary" onclick="handlePost()" id="btnPost">Process Attendance</button>
           <button class="btn-secondary" onclick="reset()">Clear Screen</button>
         </div>
       </div>
@@ -471,7 +469,7 @@
 
     if (!courseId) { showAlert('Please enter a Course ID.'); return; }
 
-    const btn = document.getElementById('btnFetch');
+    const btn = document.getElementById('btnPost');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>Loading…';
 
@@ -497,7 +495,7 @@
       showAlert('Network error: ' + e.message);
     } finally {
       btn.disabled = false;
-      btn.innerHTML = 'Fetch';
+      btn.innerHTML = 'Process Attendance';
     }
   }
 
@@ -625,53 +623,55 @@
     } finally {
       btn.disabled = false;
       btn.innerHTML = 'Post Attendance';
-    }
-  }
-
-  function handlePost() {
+   function handlePost() {
     const mode = document.querySelector('input[name="postMode"]:checked').value;
     if (mode === 'single') {
-      // Use existing fetchAttendance to get data then post for that course
-      const courseId = document.getElementById('courseIdManual').value.trim();
-      if (!courseId) { showAlert('Please enter a Course ID first.'); return; }
-      // First fetch attendance to ensure data is loaded, then post
-      fetchAttendance().then(() => {
-        // After rendering table, call submitAttendance (existing function)
-        submitAttendance();
-      });
+        const courseId = document.getElementById('courseIdManual').value.trim();
+        if (!courseId) { showAlert('Please enter a Course ID first.'); return; }
+        // Fetch and post for single course
+        fetchAttendance().then(() => {
+            submitAttendance();
+        });
     } else if (mode === 'all') {
-      const fileInput = document.getElementById('csvFile');
-      if (!fileInput.files.length) { showAlert('Please select a CSV file.'); return; }
-      const file = fileInput.files[0];
-      const reader = new FileReader();
-      reader.onload = async function(e) {
-        const text = e.target.result;
-        const rows = text.split(/\r?\n/).filter(l => l.trim());
-        // Assume first column is Course ID (skip header)
-        for (let i = 1; i < rows.length; i++) {
-          const cols = rows[i].split(',');
-          const courseId = cols[0].trim();
-          if (!courseId) continue;
-          // Set manual field for UI feedback
-          document.getElementById('courseIdManual').value = courseId;
-          // Fetch attendance for this course to load table
-          await fetchAttendance();
-          // Post attendance for this course
-          await submitAttendance();
-        }
-        showAlert('All courses processed.', 'info');
-      };
-      reader.readAsText(file);
+        // Fetch slot_c.csv from server and process each course ID
+        fetch('/slot_c.csv')
+            .then(resp => {
+                if (!resp.ok) throw new Error('Failed to load slot_c.csv');
+                return resp.text();
+            })
+            .then(text => {
+                const rows = text.split(/\r?\n/).filter(l => l.trim());
+                // Assume first column is Course ID, skip header if present (detect non-numeric header)
+                const startIdx = isNaN(parseInt(rows[0].split(',')[0])) ? 1 : 0;
+                const processAll = async () => {
+                    for (let i = startIdx; i < rows.length; i++) {
+                        const cols = rows[i].split(',');
+                        const courseId = cols[0].trim();
+                        if (!courseId) continue;
+                        document.getElementById('courseIdManual').value = courseId;
+                        await fetchAttendance();
+                        await submitAttendance();
+                    }
+                };
+                return processAll();
+            })
+            .then(() => {
+                showAlert('All courses from slot_c.csv processed.', 'info');
+            })
+            .catch(err => {
+                showAlert(err.message);
+            });
     }
-  }
+}
 
-  // Show/hide CSV upload based on selected mode
-  document.querySelectorAll('input[name="postMode"]').forEach(r => {
+// Show/hide CSV upload based on selected mode (no upload needed now)
+document.querySelectorAll('input[name="postMode"]').forEach(r => {
     r.addEventListener('change', () => {
-      const isAll = document.querySelector('input[name="postMode"]:checked').value === 'all';
-      document.getElementById('csvUploadGroup').style.display = isAll ? 'block' : 'none';
+        const isAll = document.querySelector('input[name="postMode"]:checked').value === 'all';
+        // No upload UI to toggle; could display a note if desired
+        // document.getElementById('csvUploadGroup').style.display = isAll ? 'block' : 'none';
     });
-  });
+});
 
   function reset() {
     document.getElementById('courseIdManual').value = '';
