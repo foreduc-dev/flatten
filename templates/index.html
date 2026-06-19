@@ -388,12 +388,16 @@
   <div class="card" id="courseCard">
     <div class="card-title">Course</div>
 
-
       <div class="course-row">
-        <div class="form-group">
-          <label for="courseIdManual">Enter Course ID</label>
-          <input type="text" id="courseIdManual" placeholder="e.g. 32264" style="width:160px;" />
-        </div>
+          <div id="singleCourseGroup" style="display:flex; gap:10px; align-items: flex-end;">
+            <div class="form-group">
+              <label for="courseIdManual">Enter Course ID</label>
+              <input type="text" id="courseIdManual" placeholder="e.g. 32264" style="width:160px;" />
+            </div>
+            <div class="form-group">
+              <button class="btn-primary" onclick="fetchAttendance()" id="btnFetch">Fetch Attendance</button>
+            </div>
+          </div>
         <div class="form-group">
           <label>Posting Mode</label>
           <div style="display:flex; gap:8px; margin-top:6px;">
@@ -469,7 +473,7 @@
 
     if (!courseId) { showAlert('Please enter a Course ID.'); return; }
 
-    const btn = document.getElementById('btnPost');
+    const btn = document.getElementById('btnFetch');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span>Loading…';
 
@@ -623,6 +627,9 @@
     } finally {
       btn.disabled = false;
       btn.innerHTML = 'Post Attendance';
+    }
+  }
+
    function handlePost() {
     const mode = document.querySelector('input[name="postMode"]:checked').value;
     if (mode === 'single') {
@@ -664,12 +671,12 @@
     }
 }
 
-// Show/hide CSV upload based on selected mode (no upload needed now)
+// Show/hide CSV upload based on selected mode
 document.querySelectorAll('input[name="postMode"]').forEach(r => {
     r.addEventListener('change', () => {
         const isAll = document.querySelector('input[name="postMode"]:checked').value === 'all';
-        // No upload UI to toggle; could display a note if desired
-        // document.getElementById('csvUploadGroup').style.display = isAll ? 'block' : 'none';
+        // Toggle visibility of single course input group
+        document.getElementById('singleCourseGroup').style.display = isAll ? 'none' : 'flex';
     });
 });
 
