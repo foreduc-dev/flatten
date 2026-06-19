@@ -724,18 +724,19 @@
                          datalist.appendChild(opt);
                      }
                  });
-                 // Update subject code and button label when user types/selects a value
-                 const subjectSpan = document.getElementById('subjectCodeDisplay');
-                 input.addEventListener('input', () => {
-                     const code = courseMap[input.value] || '';
-                     subjectSpan.textContent = code;
-                     const fetchBtn = document.getElementById('btnFetch');
-                     fetchBtn.textContent = input.value ? 'Process Attendance' : 'Fetch Attendance';
-                 });
-                 // Initial clear
-                 subjectSpan.textContent = '';
-                 const fetchBtn = document.getElementById('btnFetch');
-                 fetchBtn.textContent = 'Fetch Attendance';
+                  // Update subject code and button label when user types/selects a value
+                  const subjectSpan = document.getElementById('subjectCodeDisplay');
+                  const fetchBtn = document.getElementById('btnFetch');
+                  function updateCourseUI() {
+                      const code = courseMap[input.value] || '';
+                      subjectSpan.textContent = code;
+                      fetchBtn.textContent = input.value ? 'Process Attendance' : 'Fetch Attendance';
+                  }
+                  input.addEventListener('input', updateCourseUI);
+                  input.addEventListener('change', updateCourseUI);
+                  // Initial clear
+                  subjectSpan.textContent = '';
+                  fetchBtn.textContent = 'Fetch Attendance';
             })
             .catch(err => showAlert('Failed to load CSV: ' + err));
     }
