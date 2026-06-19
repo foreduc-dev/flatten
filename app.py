@@ -119,7 +119,7 @@ def _get_logged_in_session(force_refresh=False):
     cookie_timestamp = time.time()
     return sess
 
-@app.route("/api/attendance", methods=["POST"])
+@app.route("/api/attendance", methods=["GET", "POST"])
 @login_required
 def get_attendance():
     data = request.json or {}
@@ -147,7 +147,7 @@ def get_attendance():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route("/api/courses", methods=["POST"])
+@app.route("/api/courses", methods=["GET", "POST"])
 @login_required
 def get_courses():
     try:
