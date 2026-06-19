@@ -393,7 +393,8 @@
 
             <div class="form-group">
               <label for="courseIdManual">Select Course</label>
-              <select id="courseIdManual"></select>
+                <input list="courseList" id="courseIdManual" placeholder="Enter Course ID" />
+                <datalist id="courseList"></datalist>
               <label>Subject Code:</label> <span id="subjectCodeDisplay"></span>
             </div>
             <div class="form-group">
@@ -692,7 +693,7 @@
 }
 
     // ------------------------------------------------------------
-    // Load CSV on page start, show it, and fill the course dropdown
+    // Load CSV on page start, show it, and fill the course datalist
     // ------------------------------------------------------------
     function loadCourseCSV() {
         fetch('/slot_c.csv')
@@ -708,34 +709,33 @@
                 // ------------------------------------------------------------
                 const rows = txt.split(/\r?\n/).filter(l => l.trim());
                 const courseMap = {};
-                // Populate the map while creating options
-                rows.forEach(row => {
-                    const cols = row.split(',');
-                    const id = cols[0].trim();
-                    const subject = cols[1] ? cols[1].trim() : '';
-                    if (id) {
-                        courseMap[id] = subject;
-                    }
-                });
-                // Update subject code display when selection changes
-                const select = document.getElementById('courseIdManual');
-                select.innerHTML = '<option value="">-- Select a course --</option>';
-                rows.forEach(row => {
-                    const cols = row.split(',');
-                    const id = cols[0].trim();
-                    if (id) {
-                        const opt = document.createElement('option');
-                        opt.value = id;
-                        opt.textContent = id;
-                        select.appendChild(opt);
-                    }
-                });
-                select.addEventListener('change', () => {
-                    const code = courseMap[select.value] || '';
-                    document.getElementById('subjectCode').textContent = code;
-                });
-                // Initial clear
-                document.getElementById('subjectCode').textContent = '';
+                // Populate the course list datalist and map subject codes
+                 const input = document.getElementById('courseIdManual');
+                 const datalist = document.getElementById('courseList');
+                 datalist.innerHTML = '';
+                 rows.forEach(row => {
+                     const cols = row.split(',');
+                     const id = cols[0].trim();
+                     const subject = cols[1] ? cols[1].trim() : '';
+                     if (id) {
+                         courseMap[id] = subject;
+                         const opt = document.createElement('option');
+                         opt.value = id;
+                         datalist.appendChild(opt);
+                     }
+                 });
+                 // Update subject code and button label when user types/selects a value
+                 const subjectSpan = document.getElementById('subjectCodeDisplay');
+                 input.addEventListener('input', () => {
+                     const code = courseMap[input.value] || '';
+                     subjectSpan.textContent = code;
+                     const fetchBtn = document.getElementById('btnFetch');
+                     fetchBtn.textContent = input.value ? 'Process Attendance' : 'Fetch Attendance';
+                 });
+                 // Initial clear
+                 subjectSpan.textContent = '';
+                 const fetchBtn = document.getElementById('btnFetch');
+                 fetchBtn.textContent = 'Fetch Attendance';
             })
             .catch(err => showAlert('Failed to load CSV: ' + err));
     }
