@@ -15,15 +15,8 @@ app = Flask(__name__)
 # -----------------------------------------------------------------
 @app.before_request
 def auto_logout():
-    # Allow access to the login page, logout route, static files, and any API endpoints that are explicitly exempt
-    exempt = ['login', 'static', 'logout']
-    if request.endpoint not in exempt:
-        # If we just logged in, allow the next request (e.g., redirect to home) before forcing logout
-        if session.get('allow_next'):
-            session.pop('allow_next', None)
-            return  # continue processing request
-        session.clear()
-        return redirect(url_for('login'))
+    # Auto-logout disabled – keep session alive after login
+    pass
 
 
 # ----- CONFIG -------------------------------------------------
