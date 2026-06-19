@@ -390,9 +390,10 @@
 
       <div class="course-row">
           <div id="singleCourseGroup" style="display:flex; gap:10px; align-items: flex-end;">
+
             <div class="form-group">
-              <label for="courseIdManual">Enter Course ID</label>
-              <input type="text" id="courseIdManual" placeholder="e.g. 32264" style="width:160px;" />
+              <label for="courseIdManual">Select Course</label>
+              <select id="courseIdManual"></select>
             </div>
             <div class="form-group">
               <button class="btn-primary" onclick="fetchAttendance()" id="btnFetch">Fetch Attendance</button>
@@ -659,7 +660,7 @@
                 });
         } else if (mode === 'all') {
         // Fetch slot_c.csv from server and process each course ID
-        fetch('/static/slot_c.csv')
+        fetch('/slot_c.csv')
             .then(resp => {
                 if (!resp.ok) throw new Error('Failed to load slot_c.csv');
                 return resp.text();
@@ -688,6 +689,39 @@
             });
     }
 }
+
+    // ------------------------------------------------------------
+    // Load CSV on page start, show it, and fill the course dropdown
+    // ------------------------------------------------------------
+    function loadCourseCSV() {
+        fetch('/slot_c.csv')
+            .then(r => r.ok ? r.text() : Promise.reject('Failed to load CSV'))
+            .then(txt => {
+                // Show CSV preview
+                const pre = document.getElementById('csvPre');
+                pre.textContent = txt;
+                document.getElementById('csvResults').style.display = 'block';
+
+                // Populate the <select> with course IDs (first column)
+                const select = document.getElementById('courseIdManual');
+                select.innerHTML = '<option value="">-- Select a course --</option>';
+                const rows = txt.split(/\r?\n/).filter(l => l.trim());
+                rows.forEach(row => {
+                    const cols = row.split(',');
+                    const id = cols[0].trim();
+                    if (id) {
+                        const opt = document.createElement('option');
+                        opt.value = id;
+                        opt.textContent = id;
+                        select.appendChild(opt);
+                    }
+                });
+            })
+            .catch(err => showAlert('Failed to load CSV: ' + err));
+    }
+
+    // Run when the DOM is ready
+    document.addEventListener('DOMContentLoaded', loadCourseCSV);
 
 // Show/hide CSV upload based on selected mode
 document.querySelectorAll('input[name="postMode"]').forEach(r => {
