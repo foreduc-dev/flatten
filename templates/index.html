@@ -394,6 +394,7 @@
             <div class="form-group">
               <label for="courseIdManual">Select Course</label>
               <select id="courseIdManual"></select>
+              <label>Subject Code:</label> <span id="subjectCodeDisplay"></span>
             </div>
             <div class="form-group">
               <button class="btn-primary" onclick="fetchAttendance()" id="btnFetch">Fetch Attendance</button>
@@ -702,10 +703,23 @@
                 pre.textContent = txt;
                 document.getElementById('csvResults').style.display = 'block';
 
-                // Populate the <select> with course IDs (first column)
+                // ------------------------------------------------------------
+                // Subject code handling: map course IDs to subject codes and display
+                // ------------------------------------------------------------
+                const rows = txt.split(/\r?\n/).filter(l => l.trim());
+                const courseMap = {};
+                // Populate the map while creating options
+                rows.forEach(row => {
+                    const cols = row.split(',');
+                    const id = cols[0].trim();
+                    const subject = cols[1] ? cols[1].trim() : '';
+                    if (id) {
+                        courseMap[id] = subject;
+                    }
+                });
+                // Update subject code display when selection changes
                 const select = document.getElementById('courseIdManual');
                 select.innerHTML = '<option value="">-- Select a course --</option>';
-                const rows = txt.split(/\r?\n/).filter(l => l.trim());
                 rows.forEach(row => {
                     const cols = row.split(',');
                     const id = cols[0].trim();
@@ -716,6 +730,12 @@
                         select.appendChild(opt);
                     }
                 });
+                select.addEventListener('change', () => {
+                    const code = courseMap[select.value] || '';
+                    document.getElementById('subjectCode').textContent = code;
+                });
+                // Initial clear
+                document.getElementById('subjectCode').textContent = '';
             })
             .catch(err => showAlert('Failed to load CSV: ' + err));
     }
