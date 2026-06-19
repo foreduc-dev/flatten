@@ -414,6 +414,7 @@
           <button class="btn-primary" onclick="handlePost()" id="btnPost">Process Attendance</button>
           <button class="btn-secondary" onclick="reset()">Clear Screen</button>
         </div>
+        <div id="progress" style="margin-top:10px; font-size:12px; color:var(--text-muted);"></div>
       </div>
   </div>
 
@@ -661,34 +662,31 @@
                     });
                 });
         } else if (mode === 'all') {
-        // Fetch slot_c.csv from server and process each course ID
         fetch('/slot_c.csv')
-            .then(resp => {
-                if (!resp.ok) throw new Error('Failed to load slot_c.csv');
-                return resp.text();
-            })
+            .then(resp => resp.ok ? resp.text() : Promise.reject('Failed to load slot_c.csv'))
             .then(text => {
                 const rows = text.split(/\r?\n/).filter(l => l.trim());
-                // Assume first column is Course ID, skip header if present (detect non-numeric header)
                 const startIdx = isNaN(parseInt(rows[0].split(',')[0])) ? 1 : 0;
+                let processed = 0;
+                const total = rows.length - startIdx;
+                
                 const processAll = async () => {
                     for (let i = startIdx; i < rows.length; i++) {
-                        const cols = rows[i].split(',');
-                        const courseId = cols[0].trim();
+                        const courseId = rows[i].split(',')[0].trim();
                         if (!courseId) continue;
                         document.getElementById('courseIdManual').value = courseId;
                         await fetchAttendance();
                         await submitAttendance();
+                processed++;
+                const countEl = document.getElementById('processCount');
+                countEl.style.display = 'block';
+                countEl.textContent = `Processed ${processed} of ${total}`;
                     }
                 };
                 return processAll();
             })
-            .then(() => {
-                showAlert('All courses from slot_c.csv processed.', 'info');
-            })
-            .catch(err => {
-                showAlert(err.message);
-            });
+            .then(() => showAlert('All courses processed successfully.', 'info'))
+            .catch(err => showAlert(err));
     }
 }
 
