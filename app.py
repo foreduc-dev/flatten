@@ -205,3 +205,5 @@ from flask import send_from_directory
 def serve_slot_csv():
     return send_from_directory(os.path.abspath(os.path.dirname(__file__)), 'slot_c.csv')
 
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)

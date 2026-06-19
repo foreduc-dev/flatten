@@ -641,7 +641,7 @@
         });
     } else if (mode === 'all') {
         // Fetch slot_c.csv from server and process each course ID
-        fetch('/slot_c.csv')
+        fetch('/static/slot_c.csv')
             .then(resp => {
                 if (!resp.ok) throw new Error('Failed to load slot_c.csv');
                 return resp.text();
