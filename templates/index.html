@@ -391,12 +391,17 @@
       <div class="course-row">
           <div id="singleCourseGroup" style="display:flex; gap:10px; align-items: flex-end;">
 
-            <div class="form-group">
-              <label for="courseIdManual">Select Course</label>
-                <input list="courseList" id="courseIdManual" placeholder="Enter Course ID" />
-                <datalist id="courseList"></datalist>
-              <label>Subject Code:</label> <span id="subjectCodeDisplay"></span>
-            </div>
+        <div class="form-group">
+          <label for="courseIdManual">Select Course ID</label>
+          <input list="courseList" id="courseIdManual" placeholder="Enter Course ID" />
+          <datalist id="courseList"></datalist>
+        </div>
+        <div class="form-group">
+          <label for="courseCodeInput">Course Code</label>
+          <input list="courseCodeList" id="courseCodeInput" placeholder="Select Course Code" />
+          <datalist id="courseCodeList"></datalist>
+        </div>
+        <label>Subject Code: <span id="subjectCodeDisplay"></span></label>
             <div class="form-group">
               <button class="btn-primary" onclick="fetchAttendance()" id="btnFetch">Fetch Attendance</button>
             </div>
@@ -413,8 +418,10 @@
         <div class="form-group" style="display:flex; gap:8px; margin-top:6px;">
           <button class="btn-primary" onclick="handlePost()" id="btnPost">Process Attendance</button>
           <button class="btn-secondary" onclick="reset()">Clear Screen</button>
+          <button class="btn-secondary" id="btnStop" onclick="stopBulkProcess()" style="display:none;">Stop Process</button>
         </div>
         <div id="progress" style="margin-top:10px; font-size:12px; color:var(--text-muted);"></div>
+        <div id="processCount" style="margin-top:10px; font-size:12px; color:var(--text-muted); display:none;"></div>
       </div>
   </div>
 
@@ -476,8 +483,6 @@
     setTimeout(() => { el.style.display = 'none'; }, 5000);
   }
 
-
-
   async function fetchAttendance() {
     const courseId = document.getElementById('courseIdManual').value.trim();
 
@@ -509,7 +514,7 @@
       showAlert('Network error: ' + e.message);
     } finally {
       btn.disabled = false;
-      btn.innerHTML = 'Process Attendance';
+      btn.innerHTML = 'Fetch Attendance';
     }
   }
 
@@ -617,6 +622,7 @@
       const resp = await fetch('/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ 
           course_id: courseId,
           student_id_list: studentIdList,
@@ -640,104 +646,161 @@
     }
   }
 
-   function handlePost() {
-    const mode = document.querySelector('input[name="postMode"]:checked').value;
-        if (mode === 'single') {
-            const courseId = document.getElementById('courseIdManual').value.trim();
-            if (!courseId) { showAlert('Please enter a Course ID first.'); return; }
-            // 0️⃣ Show the CSV data before any posting
-            fetch('/slot_c.csv')
-                .then(r => r.ok ? r.text() : Promise.reject('Failed to load CSV'))
-                .then(txt => {
-                    const pre = document.getElementById('csvPre');
-                    pre.textContent = txt;
-                    document.getElementById('csvResults').style.display = 'block';
-                })
-                .catch(err => showAlert(err))
-                .finally(() => {
-                    // 1️⃣ Fetch the attendance for the entered course
-                    fetchAttendance().then(() => {
-                        // 2️⃣ Post the attendance for that course
-                        submitAttendance();
+        // Global abort flag for bulk processing
+        let abortBulk = false;
+
+        function stopBulkProcess() {
+            abortBulk = true;
+        }
+
+        // Modified handlePost to support stopping and no-attendance fetch for all courses
+        function handlePost() {
+            const mode = document.querySelector('input[name="postMode"]:checked').value;
+            if (mode === 'single') {
+                const courseId = document.getElementById('courseIdManual').value.trim();
+                if (!courseId) { showAlert('Please enter a Course ID first.'); return; }
+                // Show CSV data before posting
+                fetch('/slot_c.csv')
+                    .then(r => r.ok ? r.text() : Promise.reject('Failed to load CSV'))
+                    .then(txt => {
+                        const pre = document.getElementById('csvPre');
+                        pre.textContent = txt;
+                        document.getElementById('csvResults').style.display = 'block';
+                    })
+                    .catch(err => showAlert(err))
+                    .finally(() => {
+                        // Fetch attendance then post
+                        fetchAttendance().then(() => {
+                            submitAttendance();
+                        });
                     });
+            } else if (mode === 'all') {
+                abortBulk = false;
+                document.getElementById('btnStop').style.display = 'inline-block';
+                fetch('/slot_c.csv')
+                    .then(resp => resp.ok ? resp.text() : Promise.reject('Failed to load slot_c.csv'))
+                    .then(text => {
+                        const rows = text.split(/\r?\n/).filter(l => l.trim());
+                        const startIdx = isNaN(parseInt(rows[0].split(',')[0])) ? 1 : 0;
+                        const total = rows.length - startIdx;
+                        let processed = 0;
+                        const countEl = document.getElementById('processCount');
+                        countEl.style.display = 'block';
+
+                        const processAll = async () => {
+                            for (let i = startIdx; i < rows.length; i++) {
+                                if (abortBulk) break;
+                                const courseId = rows[i].split(',')[0].trim();
+                                if (!courseId) continue;
+                                document.getElementById('courseIdManual').value = courseId;
+                                // Directly post attendance without fetching class list
+                                await postOnly(courseId);
+                                processed++;
+                                countEl.textContent = `Processed ${processed} of ${total}`;
+                            }
+                            return { processed, total };
+                        };
+                        return processAll();
+                    })
+                    .then((res) => {
+                        if (abortBulk) {
+                            showAlert(`Processing stopped by user. Processed ${res.processed} of ${res.total} courses.`, 'info');
+                        } else {
+                            showAlert(`All courses processed. Posted ${res.processed} of ${res.total} courses.`, 'info');
+                        }
+                    })
+                    .catch(err => showAlert(err))
+                    .finally(() => {
+                        document.getElementById('btnStop').style.display = 'none';
+                    });
+            }
+        }
+
+        // Helper to post attendance without fetching attendance data (assumes all present)
+        async function postOnly(courseId) {
+            const btn = document.getElementById('btnSubmit');
+            btn.disabled = true;
+            try {
+                const resp = await fetch('/api/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        course_id: courseId,
+                        student_id_list: '', // empty means all present
+                        type: "ABS"
+                    })
                 });
-        } else if (mode === 'all') {
-        fetch('/slot_c.csv')
-            .then(resp => resp.ok ? resp.text() : Promise.reject('Failed to load slot_c.csv'))
-            .then(text => {
-                const rows = text.split(/\r?\n/).filter(l => l.trim());
-                const startIdx = isNaN(parseInt(rows[0].split(',')[0])) ? 1 : 0;
-                let processed = 0;
-                const total = rows.length - startIdx;
-                
-                const processAll = async () => {
-                    for (let i = startIdx; i < rows.length; i++) {
-                        const courseId = rows[i].split(',')[0].trim();
-                        if (!courseId) continue;
-                        document.getElementById('courseIdManual').value = courseId;
-                        await fetchAttendance();
-                        await submitAttendance();
-                processed++;
-                const countEl = document.getElementById('processCount');
-                countEl.style.display = 'block';
-                countEl.textContent = `Processed ${processed} of ${total}`;
-                    }
-                };
-                return processAll();
-            })
-            .then(() => showAlert('All courses processed successfully.', 'info'))
-            .catch(err => showAlert(err));
-    }
-}
+                const data = await resp.json();
+                if (!resp.ok) {
+                    showAlert(data.error || 'Failed to post attendance for ' + courseId);
+                }
+            } catch (e) {
+                showAlert('Network error: ' + e.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
 
     // ------------------------------------------------------------
     // Load CSV on page start, show it, and fill the course datalist
     // ------------------------------------------------------------
-    function loadCourseCSV() {
-        fetch('/slot_c.csv')
-            .then(r => r.ok ? r.text() : Promise.reject('Failed to load CSV'))
-            .then(txt => {
-                // Show CSV preview
-                const pre = document.getElementById('csvPre');
-                pre.textContent = txt;
-                document.getElementById('csvResults').style.display = 'block';
+        function loadCourseCSV() {
+            fetch('/slot_c.csv')
+                .then(r => r.ok ? r.text() : Promise.reject('Failed to load CSV'))
+                .then(txt => {
+                    // Show CSV preview
+                    const pre = document.getElementById('csvPre');
+                    pre.textContent = txt;
+                    document.getElementById('csvResults').style.display = 'block';
 
-                // ------------------------------------------------------------
-                // Subject code handling: map course IDs to subject codes and display
-                // ------------------------------------------------------------
-                const rows = txt.split(/\r?\n/).filter(l => l.trim());
-                const courseMap = {};
-                // Populate the course list datalist and map subject codes
-                 const input = document.getElementById('courseIdManual');
-                 const datalist = document.getElementById('courseList');
-                 datalist.innerHTML = '';
-                 rows.forEach(row => {
-                     const cols = row.split(',');
-                     const id = cols[0].trim();
-                     const subject = cols[1] ? cols[1].trim() : '';
-                     if (id) {
-                         courseMap[id] = subject;
-                         const opt = document.createElement('option');
-                         opt.value = id;
-                         datalist.appendChild(opt);
-                     }
-                 });
-                  // Update subject code and button label when user types/selects a value
-                  const subjectSpan = document.getElementById('subjectCodeDisplay');
-                  const fetchBtn = document.getElementById('btnFetch');
-                  function updateCourseUI() {
-                      const code = courseMap[input.value] || '';
-                      subjectSpan.textContent = code;
-                      fetchBtn.textContent = input.value ? 'Process Attendance' : 'Fetch Attendance';
-                  }
-                  input.addEventListener('input', updateCourseUI);
-                  input.addEventListener('change', updateCourseUI);
-                  // Initial clear
-                  subjectSpan.textContent = '';
-                  fetchBtn.textContent = 'Fetch Attendance';
-            })
-            .catch(err => showAlert('Failed to load CSV: ' + err));
-    }
+                    const rows = txt.split(/\r?\n/).filter(l => l.trim());
+                    const courseMap = {};
+                    const codeMap = {};
+                    const input = document.getElementById('courseIdManual');
+                    const codeInput = document.getElementById('courseCodeInput');
+                    const datalist = document.getElementById('courseList');
+                    const codeDatalist = document.getElementById('courseCodeList');
+                    datalist.innerHTML = '';
+                    codeDatalist.innerHTML = '';
+                    rows.forEach(row => {
+                        const cols = row.split(',');
+                        const id = cols[0].trim();
+                        const subject = cols[1] ? cols[1].trim() : '';
+                        if (id) {
+                            courseMap[id] = subject;
+                            const opt = document.createElement('option');
+                            opt.value = id;
+                            datalist.appendChild(opt);
+                        }
+                        if (subject) {
+                            codeMap[subject] = id;
+                            const opt = document.createElement('option');
+                            opt.value = subject;
+                            codeDatalist.appendChild(opt);
+                        }
+                    });
+                    const subjectSpan = document.getElementById('subjectCodeDisplay');
+                    const fetchBtn = document.getElementById('btnFetch');
+                    function updateFromId() {
+                        const code = courseMap[input.value] || '';
+                        subjectSpan.textContent = code;
+                        fetchBtn.textContent = input.value ? 'Process Attendance' : 'Fetch Attendance';
+                    }
+                    function updateFromCode() {
+                        const id = codeMap[codeInput.value] || '';
+                        input.value = id;
+                        updateFromId();
+                    }
+                    input.addEventListener('input', updateFromId);
+                    input.addEventListener('change', updateFromId);
+                    codeInput.addEventListener('input', updateFromCode);
+                    codeInput.addEventListener('change', updateFromCode);
+                    // Initial clear
+                    subjectSpan.textContent = '';
+                    fetchBtn.textContent = 'Fetch Attendance';
+                })
+                .catch(err => showAlert('Failed to load CSV: ' + err));
+        }
 
     // Run when the DOM is ready
     document.addEventListener('DOMContentLoaded', loadCourseCSV);

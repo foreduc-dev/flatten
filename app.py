@@ -91,6 +91,8 @@ def _get_logged_in_session(force_refresh=False):
     })
     # initial GET to obtain viewstate
     resp = sess.get(BASE_URL, timeout=15)
+    if resp.status_code == 403:
+        raise Exception('Access denied (403) when loading ARMS login page. Verify credentials or IP restrictions.')
     if resp.status_code != 200:
         raise Exception(f"Failed to load ARMS login page: {resp.status_code}")
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -130,6 +132,8 @@ def get_attendance():
             "SectionId": "0"
         }
         resp = sess.get(url, params=params, timeout=15)
+        if resp.status_code == 403:
+            raise Exception('Access denied (403) when fetching attendance data. Verify credentials or IP restrictions.')
         if resp.text.strip().startswith("<"):
             sess = _get_logged_in_session(force_refresh=True)
             resp = sess.get(url, params=params, timeout=15)
