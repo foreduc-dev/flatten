@@ -162,6 +162,30 @@ def get_courses():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+# ----- NEW ENDPOINT: Fetch Course ID by Subject ID -------------------
+@app.route("/api/course_by_subject", methods=["GET"]) 
+@login_required
+def get_course_by_subject():
+    subject_id = request.args.get('subject_id')
+    if not subject_id:
+        return jsonify({"error": "subject_id query parameter is required"}), 400
+    try:
+        sess = _get_logged_in_session()
+        url = f"{BASE_URL}/Handler/Administration.ashx"
+        params = {"Page": "GETCOURSEBYSELECTPGM", "Mode": "RUNDROPDOWN", "Id": "0"}
+        resp = sess.get(url, params=params, timeout=15)
+        if resp.status_code != 200:
+            raise Exception(f"Failed to fetch courses: {resp.status_code}")
+        data = resp.json()
+        # Find matching entry where SubjectId or Id matches the provided subject_id
+        for entry in data:
+            if str(entry.get('SubjectId') or entry.get('Id')) == subject_id:
+                course_id = str(entry.get('Id') or entry.get('SubjectId'))
+                return jsonify({"subject_id": subject_id, "course_id": course_id})
+        return jsonify({"error": f"No course found for subject_id {subject_id}"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 @app.route("/api/submit", methods=["POST"])
 @login_required
 def submit_attendance():
