@@ -220,7 +220,7 @@
     </div>
   </div>
   <div class="right">
-    <form id="loginForm" method="POST" novalidate>
+    <form id="loginForm" novalidate>
       <div class="field">
         <label for="username">
           <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>
@@ -228,7 +228,7 @@
           <span class="badge"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 13l-1.41 1.41L12 13.83l-3.59 3.58L7 15l3.59-3.58L7 8l1.41-1.41L12 10.17l3.59-3.58L17 8l-3.59 3.58L17 15z"/></svg> masked</span>
         </label>
         <svg class="icon-left" viewBox="0 0 24 24"><path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>
-        <input type="text" id="username" name="username" placeholder="Enter username" autocomplete="off" />
+        <input type="password" id="username" name="username" placeholder="Enter username" autocomplete="off" />
         <button type="button" class="toggle-eye" data-target="username"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 13c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg></button>
         <div class="error-msg" id="err-username"></div>
       </div>
@@ -252,35 +252,52 @@
   </div>
 </div>
 <script>
-// Toggle password visibility
-document.querySelectorAll('.toggle-eye').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const targetId = btn.getAttribute('data-target');
-    const input = document.getElementById(targetId);
-    input.type = input.type === 'password' ? 'text' : 'password';
-  });
-});
+  const form = document.getElementById('loginForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const successBanner = document.getElementById('successBanner');
+  const errUsername = document.getElementById('err-username');
+  const errPassword = document.getElementById('err-password');
 
-// Simple client‑side validation; allow normal form submission when valid
-const form = document.getElementById('loginForm');
-form.addEventListener('submit', e => {
-  const username = document.getElementById('username').value.trim();
-  const password = document.getElementById('password').value.trim();
-  let valid = true;
-  document.getElementById('err-username').textContent = '';
-  document.getElementById('err-password').textContent = '';
-  if (!username) {
-    document.getElementById('err-username').textContent = 'Username required.';
-    valid = false;
-  }
-  if (!password) {
-    document.getElementById('err-password').textContent = 'Password required.';
-    valid = false;
-  }
-  if (!valid) {
-    e.preventDefault(); // stop submission
-  }
-});
+  // eye toggle logic
+  document.querySelectorAll('.toggle-eye').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-target');
+      const input = document.getElementById(targetId);
+      if (input.type === 'password') {
+        input.type = 'text';
+      } else {
+        input.type = 'password';
+      }
+    });
+  });
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    let valid = true;
+    errUsername.textContent = '';
+    errPassword.textContent = '';
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    if (!username) {
+      errUsername.textContent = 'Username required.';
+      valid = false;
+    }
+    if (!password) {
+      errPassword.textContent = 'Password required.';
+      valid = false;
+    }
+    if (!valid) return;
+    // Disable button and show success banner
+    submitBtn.disabled = true;
+    successBanner.style.display = 'flex';
+    // Simulate redirect after 2 seconds
+    setTimeout(() => {
+      // Here you could redirect, for demo we just re-enable button
+      submitBtn.disabled = false;
+      successBanner.style.display = 'none';
+      // window.location.href = '/dashboard';
+    }, 2000);
+  });
 </script>
 </body>
 </html>
