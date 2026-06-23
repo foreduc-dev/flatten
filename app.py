@@ -32,8 +32,7 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "change‑me‑to‑a‑random‑
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not session.get('logged_in'):
-            return redirect(url_for('login'))
+        # Bypass authentication – always allow access
         return f(*args, **kwargs)
     return decorated
 
