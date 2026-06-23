@@ -40,36 +40,16 @@ def check_app_auth(username, password):
     app_user = os.getenv("APP_USERNAME", "admin")
     app_pass = os.getenv("APP_PASSWORD", "kpybala")
     return username == app_user and password == app_pass
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        app_user = os.environ.get('APP_USERNAME', 'admin')
-        app_pass = os.environ.get('APP_PASSWORD', 'kpybala')
-        if username == app_user and password == app_pass:
-            session['logged_in'] = True
-            session['allow_next'] = True  # allow immediate home view after login
-            session['username'] = username
-            flash('Login successful!', 'success')
-            return redirect(url_for('home'))
-        else:
-            flash('Invalid credentials', 'danger')
-    return render_template('login.html')
+# Login route removed (authentication disabled)
 
-@app.route('/logout')
-def logout():
-    session.clear()
-    flash('Logged out', 'info')
-    return redirect(url_for('login'))
 
-# ----- ROUTES -------------------------------------------------
+# Logout route removed (authentication disabled)
+
+
 @app.route('/')
 def home():
-    """Home route – shows login if not authenticated, else main app."""
-    if session.get('logged_in'):
-        return render_template('index.html')
-    return redirect(url_for('login'))
+    """Home route – render main index directly."""
+    return render_template('index.html')
 
 # The `/login` route already handles GET (show form) and POST (process credentials).
 # No additional route needed.
