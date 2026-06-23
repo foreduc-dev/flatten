@@ -21,8 +21,8 @@ def auto_logout():
 
 # ----- CONFIG -------------------------------------------------
 BASE_URL = "https://arms.sse.saveetha.com"
-USERNAME = os.getenv("ARMS_USERNAME", "Ssetssh239")
-PASSWORD = os.getenv("ARMS_PASSWORD", "Ssetssh239")
+USERNAME = os.getenv("ARMS_USERNAME", "SSETSEC239")
+PASSWORD = os.getenv("ARMS_PASSWORD", "Ssetsec239")
 USER_ID  = os.getenv("ARMS_USER_ID",   "3")
 
 # Flask secret key – required for sessions
